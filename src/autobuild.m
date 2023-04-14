@@ -4,8 +4,8 @@ set_param('Jenkins_brake','LaunchReport','off');
 try
 	rtwbuild('Jenkins_brake');
 catch
-	%warning('Error while building Model1');
-% 	exit(1);
+	warning('Error while building Model1');
+ 	exit(1);
 end
 save_system('Jenkins_brake');
 close_system('Jenkins_brake');
