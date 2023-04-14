@@ -1,4 +1,4 @@
-
+addpath(genpath('home/ubuntu/JenkinsTest/src'));
 load_system('Jenkins_Brake');
 set_param('Jenkins_Brake','LaunchReport','off');
 try
