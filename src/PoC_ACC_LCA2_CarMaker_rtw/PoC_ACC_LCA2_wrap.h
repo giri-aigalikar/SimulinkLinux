@@ -1,0 +1,63 @@
+/***************************************************** target specific file ***/
+/*  Wrapper module for Simulink models                                        */
+/*  ------------------------------------------------------------------------  */
+/*  (c) IPG Automotive GmbH    www.ipg-automotive.com   Fon: +49.721.98520-0  */
+/*  Bannwaldallee 60      D-76185 Karlsruhe   Germany   Fax: +49.721.98520-99 */
+/******************************************************************************/
+#ifndef __POC_ACC_LCA2_WRAP_H__
+#define __POC_ACC_LCA2_WRAP_H__
+#ifndef IS_CAR
+# define IS_CAR
+#endif
+
+#ifdef __cplusplus
+
+extern "C" {
+
+#endif
+
+  struct tInfos;
+  struct tMdlBdyFrame;
+  struct tMatSuppDictDef;
+  struct tMatSuppTunables;
+
+#ifdef CLASSIC_INTERFACE
+# define rtModel_PoC_ACC_LCA2          RT_MODEL_PoC_ACC_LCA2_T
+#else
+# define rtModel_PoC_ACC_LCA2          tag_RTM_PoC_ACC_LCA2_T
+#endif                                 //CLASSIC_INTERFACE
+
+#define ExternalInputs_PoC_ACC_LCA2    ExtU_PoC_ACC_LCA2_T
+#define ExternalOutputs_PoC_ACC_LCA2   ExtY_PoC_ACC_LCA2_T
+#ifndef PoC_ACC_LCA2_rtModel
+
+  typedef struct rtModel_PoC_ACC_LCA2 rtModel_PoC_ACC_LCA2;
+
+#endif
+
+  /* Model registration function */
+  rtModel_PoC_ACC_LCA2 *PoC_ACC_LCA2 (struct tInfos *Inf);
+
+#if defined(CLASSIC_INTERFACE) && !defined(CM4SLDS)
+
+  void rt_ODECreateIntegrationData (RTWSolverInfo *si);
+  void rt_ODEUpdateContinuousStates(RTWSolverInfo *si);
+  void rt_ODEDestroyIntegrationData(RTWSolverInfo *si);
+
+#endif
+
+  /* Dictionary variables and other items of the model */
+  extern struct tMatSuppDictDef *PoC_ACC_LCA2_DictDefines;
+  extern struct tMdlBdyFrame *PoC_ACC_LCA2_BdyFrameDefines;
+
+  /* Wrapper functions */
+  void PoC_ACC_LCA2_SetParams (rtModel_PoC_ACC_LCA2 *rtm,
+      struct tMatSuppTunables *tuns,
+      struct tInfos *Inf);
+  int PoC_ACC_LCA2_Register (void);
+
+#ifdef __cplusplus
+
+}
+#endif
+#endif                                 /* __POC_ACC_LCA2_WRAP_H__ */
