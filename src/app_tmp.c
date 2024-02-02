@@ -31,30 +31,26 @@
 extern const char *SetConnectedIO (const char *io);
 
 static const char *CompileLibs[] = {
-    /* libPoC_ACC_LCA_linux64.a */
-    /* libSRM_1_b4_linux64.a */
-    /* libPoC_ACC_LCA2_linux64.a */
-    /* /opt/ipg/carmaker/linux64-10.2.2/lib/libcar.a */
-    /* /opt/ipg/carmaker/linux64-10.2.2/lib/libcarmaker.a */
-    /* /opt/ipg/carmaker/linux64-10.2.2/lib/libipgdriver.a */
-    /* /opt/ipg/carmaker/linux64-10.2.2/lib/libipgroad.a */
-    /* /opt/ipg/carmaker/linux64-10.2.2/lib/libipgtire.a */
-    "libPoC_ACC_LCA_linux64.a	PoC_ACC_LCA linux64 1.0 2022-10-30",
-    "libSRM_1_b4_linux64.a	SRM_1_b4 linux64 1.0 2022-10-31",
-    "libPoC_ACC_LCA2_linux64.a	PoC_ACC_LCA2 linux64 1.0 2022-10-31",
-    "libcar.a	CarMaker-Car linux64 10.2.2 2022-04-26",
-    "libcarmaker.a	CarMaker linux64 10.2.2 2022-04-26",
-    "libipgdriver.a	IPGDriver linux64 10.2 2021-10-21",
-    "libipgroad.a	IPGRoad linux64 10.2.2 2022-04-25",
-    "libipgtire.a	IPGTire linux64 9.0.2 2020-06-29",
+    /* libVehControl_linux64.a */
+    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libcar.a */
+    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libcarmaker.a */
+    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgdriver.a */
+    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgroad.a */
+    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgtire.a */
+    "libVehControl_linux64.a	VehControl linux64 1.0 2024-02-02",
+    "libcar.a	CarMaker-Car linux64 12.0.1 2023-05-24",
+    "libcarmaker.a	CarMaker linux64 12.0.1 2023-05-24",
+    "libipgdriver.a	IPGDriver linux64 12.0.1.2 2023-05-24",
+    "libipgroad.a	IPGRoad linux64 12.0.1 2023-05-24",
+    "libipgtire.a	IPGTire linux64 9.1 2023-03-24",
     NULL
 };
 
 
 static const char *CompileFlags[] = {
     "-m64 -fPIC -O3 -DNDEBUG -DLINUX -DLINUX64 -D_GNU_SOURCE",
-    "-D_FILE_OFFSET_BITS=64 -DCM_NUMVER=100202",
-    "-I/opt/ipg/carmaker/linux64-10.2.2/include -Wall",
+    "-D_FILE_OFFSET_BITS=64 -DCM_NUMVER=120001",
+    "-I/opt/ipg/carmaker/linux64-12.0.1/include -Wall",
     "-Wimplicit -Wmissing-prototypes",
     NULL
 };
@@ -62,15 +58,15 @@ static const char *CompileFlags[] = {
 
 tAppStartInfo   AppStartInfo = {
     "Car_Generic <insert.your.version.no>",          /* App_Version         */
-    "24",          /* App_BuildVersion    */
+    "2",          /* App_BuildVersion    */
     "giri",     /* App_CompileUser     */
     "giri-thinkpad-p15-gen-2i",         /* App_CompileSystem   */
-    "2022-12-12 17:09:37",  /* App_CompileTime */
+    "2024-02-02 15:29:20",  /* App_CompileTime */
 
     CompileFlags,                /* App_CompileFlags  */
     CompileLibs,                 /* App_Libs          */
 
-    "10.2.2",          /* SetVersion        */
+    "12.0.1",          /* SetVersion        */
 
     NULL,           /* TestRunName       */
     NULL,           /* TestRunFName      */
@@ -98,42 +94,48 @@ void
 App_InfoPrint (void)
 {
     int i;
-    Log ("App.Version\t%s #%s (%s)\n",
+    Log ("Application.Version       = %s #%s (%s)\n",
             AppStartInfo.App_Version,
             AppStartInfo.App_BuildVersion,
             SimCoreInfo.Version);
-    Log ("App.Compiled\t%s@%s %s\n",
+    Log ("Application.Compiled      = %s@%s %s\n",
             AppStartInfo.App_CompileUser,
             AppStartInfo.App_CompileSystem,
             AppStartInfo.App_CompileTime);
+    Log ("Application.BuildVersion  = %s\n", AppStartInfo.App_BuildVersion);
+    Log ("Application.CompileTime   = %s\n", AppStartInfo.App_CompileTime);
+    Log ("Application.CompileUser   = %s\n", AppStartInfo.App_CompileUser);
+    Log ("Application.CompileSystem = %s\n", AppStartInfo.App_CompileSystem);
 
     i = 0;
-    Log ("App.CompileFlags:\n");
+    Log ("Application.CompileFlags:\n");
     while (AppStartInfo.App_CompileFlags != NULL
         && AppStartInfo.App_CompileFlags[i] != NULL) {
         Log ("			%s\n", AppStartInfo.App_CompileFlags[i++]);
     }
 
     i = 0;
-    Log ("App.Libs:\n");
+    Log ("Application.Libs:\n");
     while (AppStartInfo.App_Libs != NULL && AppStartInfo.App_Libs[i] != NULL)
         Log ("			%s\n", AppStartInfo.App_Libs[i++]);
 
+#if 0
     /* Security */
     i = 0;
-    Log ("App.Suffixes:\n");
+    Log ("Application.Suffixes:\n");
     while (AppStartInfo.Suffix.List != NULL && AppStartInfo.Suffix.List[i] != NULL)
         Log ("			%s\n", AppStartInfo.Suffix.List[i++]);
 
     i = 0;
-    Log ("App.Keys:\n");
+    Log ("Application.Keys:\n");
     while (AppStartInfo.Key.List != NULL && AppStartInfo.Key.List[i] != NULL)
         Log ("			%s\n", AppStartInfo.Key.List[i++]);
 
 
     /*** Linked libraries */
-    Log ("App.Version.Driver =\t%s\n",  IPGDrv_LibVersion);
-    Log ("App.Version.Road =\t%s\n",    RoadLibVersion);
+    Log ("Application.Version.Driver =\t%s\n",  IPGDrv_LibVersion);
+    Log ("Application.Version.Road =\t%s\n",    RoadLibVersion);
+#endif
 }
 
 

@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 10.2.2
+**  CarMaker - Version 12.0.1
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -80,6 +80,7 @@
 
 #include <CarMaker.h>
 #include <ModelManager.h>
+#include <RemoteModelAccess.h>
 #include <Vehicle/Sensor_Inertial.h>
 #include <Vehicle/Sensor_SAngle.h>
 #include <Vehicle/Sensor_Object.h>
@@ -94,11 +95,11 @@
 #include <Vehicle/Surrounding.h>
 #include <Vehicle/Sensor_USonicRSI.h>
 #include <Vehicle/Sensor_RadarRSI.h>
-#include <Vehicle/Sensor_RadarRSILeg.h>
 #include <Vehicle/Sensor_LidarRSI.h>
 #include <Vehicle/Sensor_CameraRSI.h>
 #include <Vehicle/Sensor_Camera.h>
 #include <Vehicle/Sensor_ObjectByLane.h>
+#include <Vehicle/Sensor_GroundTruth.h>
 #include <Vehicle/Sensor_Assembly.h>
 
 #  include <Car/Brake.h>
@@ -111,30 +112,16 @@
 
 #include "User.h"
 #include "IOVec.h"
+#include <can_interface.h>
+#include <flex.h>
 
 #include <CM_XCP.h>
 #include <CM_CCP.h>
+#include <rbs.h>
 
 #include "FMUQueue_IF.h"
 
 #include <SimNet.h>
-
-#if !defined(CM_HIL)
-/* Replacement functions and variables if module 'IO.c' is not present,
-   i.e. when compiling for a non-realtime environment.  */
-tIOVec	IO;
-
-int  IO_Init_First    (void)        { return 0; }
-int  IO_Init          (void)        { return 0; }
-int  IO_Init_Finalize (void)        { return 0; }
-
-int  IO_Param_Get     (tInfos *inf) { return 0; }
-void IO_BeginCycle (void) { }
-void IO_In      (unsigned CycleNo) { }
-void IO_Out     (unsigned CycleNo) { }
-void IO_Cleanup (void)             { }
-#endif /* !CM_HIL */
-
 
 
 
@@ -229,7 +216,10 @@ App_Init_First (int argc, char **argv)
     SimCore_Init_First (argc, argv);
 
     IO_Init_First ();
+    CANIf_Init_First();
+    FC_Init_First();
     User_Init_First ();
+    RBS_Init_First();
     CM_XCP_Init_First(NULL);
     CM_CCP_Init_First(NULL);
     CycControl_Init_First();
@@ -286,20 +276,34 @@ App_Init (void)
     GNavSensor_Init ();
     USonicRSI_Init ();
     RadarRSI_Init ();
-    RadarRSILeg_Init();
     LidarRSI_Init ();
     ObjByLane_Init();
     CameraSensor_Init ();
     CameraRSI_Init();
+    GroundTruthSensor_Init();
     SensorAssembly_Init();
 #if defined(CM_HIL)
     FST_Init(SimCore.TestRig.ECUParam.Inf);
 #endif
+    if (IO_CAN_IF) {
+	if (CANIf_Param_Get(SimCore.TestRig.ECUParam.Inf, NULL) != 0)
+	    return -1;
+    }
+    if (IO_FlexRay) {
+	if (FC_Param_Get(SimCore.TestRig.ECUParam.Inf, NULL) != 0)
+	    return -1;
+    }
+    if (RBS_Param_Get(SimCore.TestRig.ECUParam.Inf, NULL) != 0)
+         return -1;
     if (IO_Init() < 0)
+	return -1;
+    if (CANIf_Init() < 0)
+	return -1;
+    if (FC_Init() < 0)
 	return -1;
     if (User_Init() < 0)
 	return -1;
-    if (CM_XCP_Init() != 0 || CM_CCP_Init() != 0)
+    if (CM_XCP_Init() != 0 || CM_CCP_Init() != 0 || RBS_Init() != 0 )
 	return -1;
 
     Plugins_Init ();
@@ -344,6 +348,7 @@ App_DeclQuants (void)
     User_DeclQuants ();
     CM_XCP_DeclQuants();
     CM_CCP_DeclQuants();
+    RBS_DeclQuants();
     App_ExportConfig ();
     return 0;
 }
@@ -401,9 +406,7 @@ App_TestRun_Start (void *arg)
 	}
 
 	/* Delete Animation Message buffer */
-	SimCore_Anim_SendCmd (AnmCmd_SuppressAnim, 0);
-	SimCore_Anim_InvalidateMsgs();
-	SimCore_Instr_InvalidateMsgs();
+	SimCore_Anim_DeleteMsgBuf();
 
 	/* Delete all parts which are reconfigurated */
 	Vhcl_Delete (0);
@@ -437,6 +440,10 @@ App_TestRun_Start (void *arg)
     }
 
     if (Env_New() < 0) {
+	rv = -5;
+	goto ErrorReturn;
+    }
+    if (SimCore_TestRun_Start_SessionCmds() != 0) {
 	rv = -5;
 	goto ErrorReturn;
     }
@@ -537,10 +544,6 @@ App_TestRun_Start (void *arg)
 	rv = -32;
 	goto ErrorReturn;
     }
-    if (RadarRSILeg_New() < 0) {
-	rv = -33;
-	goto ErrorReturn;
-    }
     if (LidarRSI_New() < 0) {
 	rv = -36;
 	goto ErrorReturn;
@@ -556,6 +559,10 @@ App_TestRun_Start (void *arg)
     if (CameraSensor_New() < 0) {
 	rv = -40;
 	goto ErrorReturn;
+    }
+    if (GroundTruthSensor_New() < 0) {
+        rv = -41;
+        goto ErrorReturn;
     }
 
     if (VehicleControl_New(SimCore.TestRun.Inf) < 0) {
@@ -766,10 +773,11 @@ App_TestRun_Calc (double dt)
     Plugins_CalcBefore (DVA_VC, dt);
     DVA_HandleWriteAccess(DVA_VC);
     Plugins_CalcAfter (DVA_VC, dt);
-    if (VehicleControl_CalcPost() < 0)
-	rv = -6;
 
     if (User_VehicleControl_Calc(dt) < 0)
+	rv = -6;
+
+    if (VehicleControl_CalcPost() < 0)
 	rv = -6;
 
     SimCore_TCPU_TakeTS(&SimCore.TS.VehicleControl);
@@ -816,8 +824,6 @@ App_TestRun_Calc (double dt)
 	rv = -31;
     if (RadarRSI_Calc(dt) < 0)
 	rv = -32;
-    if (RadarRSILeg_Calc(dt) < 0)
-	rv = -33;
     if (LidarRSI_Calc(dt) < 0)
 	rv = -36;
     if (ObjByLane_Calc(dt) < 0)
@@ -826,6 +832,8 @@ App_TestRun_Calc (double dt)
 	rv = -40;
     if (CameraRSI_Calc(dt) < 0)
 	rv = -41;
+    if (GroundTruthSensor_Calc(dt) < 0)
+        rv = -42;
 
     SimCore_TCPU_TakeTS(&SimCore.TS.Sensors);
 
@@ -880,6 +888,7 @@ App_TestRun_End (void *arg)
     LineSensor_Delete ();
     RadarSensor_Delete ();
     CameraSensor_Delete ();
+    GroundTruthSensor_Delete();
 
     /* At the end free the Road-Handle after free all model own RoadEval-Handles before */
     Env_Delete ();
@@ -957,9 +966,13 @@ App_Cleanup (void)
     CycControl_Cleanup ();
     CM_XCP_Cleanup();
     CM_CCP_Cleanup();
+    RBS_Cleanup();
+    FC_Cleanup();
+    CANIf_Cleanup();
     IO_Cleanup ();
     ADTF_Cleanup ();
     User_Cleanup ();
+    GroundTruthSensor_CleanUp();
     ObjectSensor_Cleanup ();
     RadarSensor_CleanUp ();
     FSpaceSensor_Cleanup ();
@@ -971,10 +984,8 @@ App_Cleanup (void)
     InertialSensor_Cleanup ();
     USonicRSI_Cleanup ();
     RadarRSI_Cleanup ();
-    RadarRSILeg_Cleanup();
     LidarRSI_Cleanup ();
     CameraSensor_Cleanup ();
-    CameraSensor_Delete();
     CameraRSI_Cleanup();
     Surrounding_Cleanup ();
     BdyFrame_CleanUp  ();
@@ -1041,6 +1052,7 @@ MainThread_Init (void)
     if (SimCore_Init_Finalize() < 0)
 	rv = -1;
 
+
     /* everything ok until now? */
     if (nError != Log_nError && rv >= 0)
 	rv = -1;
@@ -1076,12 +1088,21 @@ MainThread_Init (void)
     if (CycControl_InitIO() < 0)
 	rv = -1;
 
-
 #if defined(XENO)
     /*** Timing of application main loop, timer device ***/
     rt_task_set_periodic(NULL, TM_NOW, round(SimCore.DeltaT*1e9));
 #endif
     CycControl_InitSleepTS();
+
+    if (FC_Start() < 0)
+	return -1;
+    if (CANIf_Init_Finalize() < 0)
+	return -1;
+    if (!IO_None) {
+	RBS_MapQuants();
+	if (RBS_Start())
+	    return -1;
+    }
 
 
     if (SimCore.State == SCState_Idle) {
@@ -1139,7 +1160,11 @@ MainThread_BeginCycle (unsigned long long CycleNo64)
 	ADASRP_Receive();
 
 	/*** Input from hardware */
+	CANIf_In((unsigned)CycleNo64);
+	FC_In((unsigned)CycleNo64);
 	IO_In((unsigned)CycleNo64);
+	RMA_In();
+	RBS_In((unsigned)CycleNo64);
 	CM_XCP_In();
 	CM_CCP_In();
 	Plugins_CalcBefore (DVA_IO_In, SimCore.DeltaT);
@@ -1405,18 +1430,14 @@ MainThread_DoCycle (unsigned long long CycleNo64)
 #if defined(XENO)
 	RTGuard_End();
 #endif
-	/* Stop simulation after the selected testrun */
-	if (SimCore.OnlyOneSimulation) {
-	    SimCore_State_Set(SCState_Idle);
-	    goto EndReturn;
-	}
 	SimCore_State_Set(SCState_EndLastCycle);
 	break;
 
 
       case SCState_EndLastCycle:
 	User_Calc(DeltaT);
-	if (SimCore.Shutdown.Request != ShutdownNot) {
+	if (SimCore.Shutdown.Request != ShutdownNot ||
+	    SimCore.OnlyOneSimulation) {
 	    SimCore_State_Set(SCState_ShutDown);
 	} else {
 	    SimCore_State_Set(SCState_Idle);
@@ -1444,14 +1465,18 @@ MainThread_FinishCycle (unsigned long long CycleNo64)
     /* output to the hardware */
     if (SimCore_InSyncWithVDS()) {
 	TestMgrCmds_Eval();
+	RBS_OutMap((unsigned)CycleNo64);
 	User_Out ((unsigned)CycleNo64);		/* -> IO */
 	SimNet_Out();
 	Plugins_CalcBefore (DVA_IO_Out, SimCore.DeltaT);
 	DVA_HandleWriteAccess(DVA_IO_Out);
 	Plugins_CalcAfter (DVA_IO_Out, SimCore.DeltaT);
 	ADTF_Out();
+	CM_XCP_Out((unsigned)CycleNo64);
+	RBS_Out((unsigned)CycleNo64);
+	RMA_Out();
 	IO_Out((unsigned)CycleNo64);		/* IO -> Hardware */
-
+	CANIf_Out((unsigned)CycleNo64);
 	ADASRP_Send();
 
 	if (SimCore.State == SCState_Simulate) {
@@ -1510,6 +1535,9 @@ int
 main (int argc, char **argv)
 {
     int nError;
+
+    SimCore_Init_Locale();
+
 
     /*** First initialisation of basic modules/structures
      * - failures are not allowed

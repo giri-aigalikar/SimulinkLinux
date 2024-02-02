@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 10.2.2
+**  CarMaker - Version 12.0.1
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -80,47 +80,27 @@
 #if defined(XENO)
 # include <mio.h>
 #endif
-#include <ioconf.h>
-#include <Vehicle/Sensor_Object.h>
-#include "AEB.h"
+# include <ioconf.h>
+
 #include <CarMaker.h>
 #include <Car/Vehicle_Car.h>
 
 #include <ADASRP.h>
-#include "rsds-client-camera.h"
-#include <rbs.h>
+
 
 #include "IOVec.h"
 #include "User.h"
 
 /* @@PLUGIN-BEGIN-INCLUDE@@ - Automatically generated code - don't edit! */
-#include "PoC_ACC_LCA_CarMaker_rtw/PoC_ACC_LCA_wrap.h"
-#include "SRM_1_b4_CarMaker_rtw/SRM_1_b4_wrap.h"
-
-#include "PoC_ACC_LCA2_CarMaker_rtw/PoC_ACC_LCA2_wrap.h"
+#include "VehControl_CarMaker_rtw/VehControl_wrap.h"
 /* @@PLUGIN-END@@ */
-#include"Vehicle/Sensor_Line.h"
-#include "LineSensorFord.h"
-tLds Lds;
-    
-#include "ObjectSensorFord.h"
-tObjSens ObjSens;
 
-#include "CameraSensorFord.h"
-tCamSens CamSens;
-
-#include "RadarSensorFord.h"
-tRadSens RadSens;
 
 int UserCalcCalledByAppTestRunCalc = 0;
-double Distance_L[NUMTRACKS][20][3];
 
-double Distance_R[NUMTRACKS][20][3];
-double Linewidth[1];
 
 tUser	User;
 
-int AEB_ON;
 
 
 /*
@@ -189,7 +169,7 @@ User_ScanCmdLine (int argc, char **argv)
 
     /* I/O configuration to be used in case no configuration was
        specified on the command line. */
-    IO_SelectDefault("default" /* or "demoapp", "demorbs,demofr" etc. */);
+    IO_SelectDefault("default" /* or "demoapp", "can,flexray" etc. */);
 
     while (*++argv) {
 	if (strcmp(*argv, "-io") == 0 && argv[1] != NULL) {
@@ -225,10 +205,7 @@ User_ScanCmdLine (int argc, char **argv)
 int
 User_Init (void)
 {
-	RSDS_Init();
     return 0;
-	
-	
 }
 
 
@@ -238,11 +215,7 @@ User_Register (void)
 {
 
     /* @@PLUGIN-BEGIN-REGISTER@@ - Automatically generated code - don't edit! */
-    PoC_ACC_LCA_Register();
-    SRM_1_b4_Register();
-
-    PoC_ACC_LCA2_Register();
-	
+    VehControl_Register();
     /* @@PLUGIN-END@@ */
 
     return 0;
@@ -263,71 +236,13 @@ User_Register (void)
 void
 User_DeclQuants (void)
 {
-	/* DDefDouble(NULL, "Distance_Lx1", "m", &Distance_L[0][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ly1", "m", &Distance_L[0][1], DVA_None);
-	DDefDouble(NULL, "Distance_Lz1", "m", &Distance_L[0][2], DVA_None);
-	DDefDouble(NULL, "Distance_Lx2", "m", &Distance_L[1][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ly2", "m", &Distance_L[1][1], DVA_None);
-	DDefDouble(NULL, "Distance_Lz2", "m", &Distance_L[1][2], DVA_None);
-	DDefDouble(NULL, "Distance_Lx3", "m", &Distance_L[2][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ly3", "m", &Distance_L[2][1], DVA_None);
-	DDefDouble(NULL, "Distance_Lz3", "m", &Distance_L[2][2], DVA_None);
-	DDefDouble(NULL, "Distance_Lx4", "m", &Distance_L[3][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ly4", "m", &Distance_L[3][1], DVA_None);
-	DDefDouble(NULL, "Distance_Lz4", "m", &Distance_L[3][2], DVA_None);
-	DDefDouble(NULL, "Distance_Lx5", "m", &Distance_L[4][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ly5", "m", &Distance_L[4][1], DVA_None);
-	DDefDouble(NULL, "Distance_Lz5", "m", &Distance_L[4][2], DVA_None);
-	DDefDouble(NULL, "Distance_Rx1", "m", &Distance_R[0][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ry1", "m", &Distance_R[0][1], DVA_None);
-	DDefDouble(NULL, "Distance_Rz1", "m", &Distance_R[0][2], DVA_None);
-	DDefDouble(NULL, "Distance_Rx2", "m", &Distance_R[1][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ry2", "m", &Distance_R[1][1], DVA_None);
-	DDefDouble(NULL, "Distance_Rz2", "m", &Distance_R[1][2], DVA_None);
-	DDefDouble(NULL, "Distance_Rx3", "m", &Distance_R[2][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ry3", "m", &Distance_R[2][1], DVA_None);
-	DDefDouble(NULL, "Distance_Rz3", "m", &Distance_R[2][2], DVA_None);
-	DDefDouble(NULL, "Distance_Rx4", "m", &Distance_R[3][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ry4", "m", &Distance_R[3][1], DVA_None);
-	DDefDouble(NULL, "Distance_Rz4", "m", &Distance_R[3][2], DVA_None);
-	DDefDouble(NULL, "Distance_Rx5", "m", &Distance_R[4][0], DVA_None);
-	DDefDouble(NULL, "Distance_Ry5", "m", &Distance_R[4][1], DVA_None);
-	DDefDouble(NULL, "Distance_Rz5", "m", &Distance_R[4][2], DVA_None);
+    int i;
 
-    int i; */
-	
-	AEB_User_DeclQuants ();
-    int i, t, j;
-
-	for (t=0; t < NUMTRACKS; t++){
-		for (i=0; i < 20; i++) {
-			for(j=0; j < 3; j++) {
-			char sbuf[32];
-			// Left Line
-			sprintf (sbuf, "Distance_L%d%d%d",t,i,j);
-			DDefDouble (NULL, sbuf, "", &Distance_L[t][i][j], DVA_None);
-
-			// Right Line
-			sprintf (sbuf, "Distance_R%d%d%d",t,i,j);
-			DDefDouble (NULL, sbuf, "", &Distance_R[t][i][j], DVA_None); 
-
-		     }
-	    }
-    }
-	
-	DDefDouble(NULL, "Linewidth", "m", &Linewidth[0], DVA_None);
-	
-    Lineds_DeclQuants();
-	ObjSens_DeclQuants();
-	CamSens_DeclQuants();
-    RadSens_DeclQuants();
-	
-    for (i=0; i < N_USEROUTPUT; i++) {
+    for (i=0; i<N_USEROUTPUT; i++) {
 	char sbuf[32];
 	sprintf (sbuf, "UserOut_%02d", i);
 	DDefDouble (NULL, sbuf, "", &User.Out[i], DVA_IO_Out);
     }
-    RBS_DeclQuants();
 }
 
 
@@ -432,7 +347,7 @@ User_TestRun_Start_atBegin (void)
 {
     int rv = 0;
     int i;
-	AEB_User_TestRun_Start_atBegin();
+
     for (i=0; i<N_USEROUTPUT; i++)
 	User.Out[i] = 0.0;
 
@@ -471,20 +386,10 @@ User_TestRun_Start_atBegin (void)
 int
 User_TestRun_Start_atEnd (void)
 {
-
-	RSDS_Start();
 #if defined(XENO)
-    IOConf_MapQuants();
-
+    IOConf_DeclQuants();
 #endif
-	int rv = 0;
-    rv = Lineds_TestRun_Start_atEnd();
-    ObjSens_TestRun_Start_atEnd();
-	CamSens_TestRun_Start_atEnd();
-	RadSens_TestRun_Start_atEnd();
-	
-    return rv;
-	
+    return 0;
 }
 
 
@@ -582,17 +487,6 @@ User_TestRun_End_First (void)
 int
 User_TestRun_End (void)
 {
-	int tt,ii,jj;
-	for (tt=0; tt<NUMTRACKS; tt++) {
-		for (ii =0; ii<20; ii++){
-			for(jj=0; jj<3 ; jj++){
-	          Distance_L[tt][ii][jj] = 0;
-
-	          Distance_R[tt][ii][jj] = 0;
-	         }
-		}
-	}
-	Linewidth[0]=0;
     return 0;
 }
 
@@ -710,37 +604,11 @@ User_Traffic_Calc (double dt)
 int
 User_Calc (double dt)
 {
-	
-	
-	if (SimCore.State != SCState_Simulate)
-	return 0;
     /* Starting with CM 6.0 User_Calc() will be invoked in EVERY simulation
        state. Uncomment the following line in order to restore the behaviour
        of CM 5.1 and earlier. */
     /*if (!UserCalcCalledByAppTestRunCalc) return 0;*/
-	int tt,ii,jj;
-	for(tt=0;tt<4;tt++){
-	   for (ii=0; ii<20; ii++) {
-		  for(jj=0; jj<3; jj++){
-	                  Distance_L[tt][ii][jj] = LineSensor->LLines.L[tt].ds[ii][jj];
-	
-	                  Distance_R[tt][ii][jj] = LineSensor->RLines.L[tt].ds[ii][jj];
-	          }
-	    }
-	}
-	Linewidth[0] = LineSensor->LLines.L[0].lineWidth;
-    Lineds_Calc(dt);
-    ObjSens_Calc(dt);
-	CamSens_Calc(dt);
-	RadSens_Calc(dt);
-	AEB_User_Calc();
-	
-	
-	
-	
-	
-	
-	
+
     return 0;
 }
 
@@ -804,7 +672,9 @@ User_Check_IsIdle (int IsIdle)
 void
 User_Out (const unsigned CycleNo)
 {
-    RBS_OutMap(CycleNo);
+#if defined(XENO)
+    IOConf_OutMap();
+#endif
 
     if (SimCore.State != SCState_Simulate)
 	return;
@@ -919,6 +789,4 @@ User_End (void)
 void
 User_Cleanup (void)
 {
-	RSDS_Exit();
-
 }

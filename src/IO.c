@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 10.2.2
+**  CarMaker - Version 12.0.1
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -46,14 +46,13 @@
 
 #include <CarMaker.h>
 
+#if defined(XENO)
 #include <mio.h>
+#endif /* defined(XENO) */
 #include <ioconf.h>
-#include <can_interface.h>
+#if defined(CM_HIL)
 #include <FailSafeTester.h>
-#include <flex.h>
-#include <rbs.h>
-#include <CM_XCP.h>
-#include <CM_CCP.h>
+#endif /* defined(CM_HIL) */
 
 #include "IOVec.h"
 
@@ -91,12 +90,12 @@ static struct tIOConfig IOConfiguration[] = {
 void
 iGetCal (tInfos *Inf, const char *key, tCal *cal, int optional)
 {
-    cal->Min       =  1e37;
-    cal->Max       = -1e37;
-    cal->LimitLow  =  1e37;
-    cal->LimitHigh = -1e37;
-    cal->Factor    =  1.0;
-    cal->Offset    =  0.0;
+    cal->Min       =  1e37f;
+    cal->Max       = -1e37f;
+    cal->LimitLow  =  1e37f;
+    cal->LimitHigh = -1e37f;
+    cal->Factor    =  1.0f;
+    cal->Offset    =  0.0f;
     cal->Rezip     =  0;
 
     const char *item = iGetStrOpt(Inf, key, NULL);
@@ -111,8 +110,8 @@ iGetCal (tInfos *Inf, const char *key, tCal *cal, int optional)
 	    LogErrF(EC_Init, "Missing calibration parameter entry '%s'", key);
 	    return;
 	}
-	cal->LimitLow  = -1e37;
-	cal->LimitHigh =  1e37;
+	cal->LimitLow  = -1e37f;
+	cal->LimitHigh =  1e37f;
     }
 
     cal->Min = cal->LimitHigh;
@@ -134,7 +133,7 @@ CalInF (tCal *cal, float Value)
     float Result = (Value - cal->Offset) * cal->Factor;
 
     if (cal->Rezip)
-	Result = 1.0 / Result;
+	Result = 1.0f / Result;
 
     if      (Result < cal->Min)  cal->Min = Result;
     else if (Result > cal->Max)  cal->Max = Result;
@@ -148,7 +147,7 @@ CalInF (tCal *cal, float Value)
 float
 CalIn (tCal *cal, int Value)
 {
-    return CalInF(cal, Value);
+    return CalInF(cal, (float) Value);
 }
 
 
@@ -170,7 +169,7 @@ CalOutF (tCal *cal, float Value)
     else if (Value > cal->LimitHigh) Value = cal->LimitHigh;
 
     if (cal->Rezip) {
-	return 1.0 / (Value*cal->Factor) + cal->Offset;
+	return 1.0f / (Value*cal->Factor) + cal->Offset;
     } else {
 	return Value/cal->Factor + cal->Offset;
     }
@@ -214,10 +213,6 @@ IO_Init_First (void)
 
     IO_SetConfigurations(IOConfiguration);
 
-    CANIf_Init_First();
-    FC_Init_First();
-    RBS_Init_First();
-
     return 0;
 }
 
@@ -239,13 +234,15 @@ IO_Init (void)
 {
     Log("I/O Configuration: %s\n", IO_ListNames(NULL, 1));
 
+#if defined(XENO)
     if (IOConf_Init() < 0)
             return -1;
+#endif /* defined(XENO) */
 
     /* hardware configuration "none" */
     if (IO_None)
 	return 0;
-
+#if defined(CM_HIL)
     int nErrors = Log_nError;
 
     /*** MIO initialization */
@@ -263,21 +260,12 @@ IO_Init (void)
 	IO_SelectNone();
 	return -1;
     }
+#endif /* defined(CM_HIL) */
 
-
+#if defined(XENO)
     /*** FailSafeTester */
     FST_ConfigureCAN();
-
-    if (IO_CAN_IF) {
-	if (CANIf_Init() < 0)
-	    return -1;
-    }
-    if (IO_FlexRay) {
-	if (FC_Init())
-	    return -1;
-    }
-    if (RBS_Init())
-        return -1;
+#endif /* defined(XENO) */
 
     return 0;
 }
@@ -295,21 +283,6 @@ IO_Init (void)
 int
 IO_Init_Finalize (void)
 {
-    RBS_MapQuants();
-    if (IO_FlexRay) {
-	if (FC_Start())
-	    return -1;
-    }
-    if (IO_CAN_IF) {
-	if (CANIf_Init_Finalize() < 0)
-	    return -1;
-    }
-
-
-    if (!IO_None) {
-	if (RBS_Start())
-            return -1;
-    }
 
     return 0;
 }
@@ -328,19 +301,16 @@ int
 IO_Param_Get (tInfos *inf)
 {
     unsigned nError = GetInfoErrorCount ();
-
+#if defined(CM_HIL)
     /* ignition off */
     SetKl15 (0);
+#if defined(XENO)
     IOConf_Param_Get();
+#endif /* defined(XENO) */
+#endif /* defined(CM_HIL) */
 
     if (IO_None)
     	return 0;
-
-    if (IO_CAN_IF)
-	CANIf_Param_Get(inf, NULL);
-    if (IO_FlexRay)
-	FC_Param_Get(inf, NULL);
-    RBS_Param_Get(inf, NULL);
 
     return nError != GetInfoErrorCount() ? -1 : 0;
 }
@@ -349,7 +319,9 @@ IO_Param_Get (tInfos *inf)
 void
 IO_BeginCycle (void)
 {
+#if defined(CM_HIL)
     MIO_SetAppState(TimeGlobal, (tMIO_SimState)SimCore_State2MIO_SimState(SimCore.State));
+#endif /* defined(CM_HIL) */
 }
 
 
@@ -370,25 +342,26 @@ IO_BeginCycle (void)
 void
 IO_In (unsigned CycleNo)
 {
+#if defined(CM_HIL)
     CAN_Msg Msg;
 
     IO.DeltaT = SimCore.DeltaT;
     IO.T      = TimeGlobal;
+#if defined(XENO)
     IOConf_In(CycleNo);
+#endif /* defined(XENO) */
     if (IO_None)
 	return;
 
     /*** FailSafeTester messages */
     if (FST_IsActive()) {
+#if defined(XENO)
 	while (MIO_M51_Recv(FST_CAN_Slot, FST_CAN_Ch, &Msg) == 0)
 	    FST_MsgIn (CycleNo, &Msg);
+#endif /* defined(XENO) */
     }
+#endif /* defined(CM_HIL) */
 
-    if (IO_CAN_IF)
-	CANIf_In(CycleNo); 
-    if (IO_FlexRay)
-	FC_In(CycleNo);
-    RBS_In(CycleNo);
 }
 
 
@@ -410,14 +383,16 @@ IO_In (unsigned CycleNo)
 void
 IO_Out (unsigned CycleNo)
 {
+#if defined(XENO)
     IOConf_Out(CycleNo);
+#endif /* defined(XENO) */
     if (IO_None)
 	return;
-
+#if defined(CM_HIL)
     /*** Messages to the FailSafeTester */
     FST_MsgOut(CycleNo);
+#endif /* defined(CM_HIL) */
 
-    RBS_Out(CycleNo);
 }
 
 
@@ -436,14 +411,14 @@ IO_Cleanup (void)
     if (IO_None)
 	goto EndReturn;
 
-    RBS_Cleanup();
-    if (IO_FlexRay)
-	FC_Cleanup();
-    if (IO_CAN_IF)
-	CANIf_Cleanup();
+#if defined(XENO)
+    IOConf_Cleanup();
+#endif
+#if defined(CM_HIL)
     MIO_SetAppState(TimeGlobal, MIO_SimState_AppExit);
     MIO_ResetModules();
     MIO_DeleteAll();
+#endif /* defined(CM_HIL) */
 
   EndReturn:
     return;

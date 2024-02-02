@@ -1,5 +1,5 @@
 #******************************************************************************
-#**  CarMaker - Version 10.2.2
+#**  CarMaker - Version 12.0.1
 #**  Vehicle Dynamics Simulation Toolkit
 #**
 #**  Copyright (C)   IPG Automotive GmbH
@@ -13,7 +13,7 @@
 #**
 #******************************************************************************
 
-include /opt/ipg/carmaker/linux64-10.2.2/include/MakeDefs.linux64
+include /opt/ipg/carmaker/linux64-12.0.1/include/MakeDefs.linux64
 
 APP_VER =		"Car_Generic <insert.your.version.no>"
 APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)
@@ -22,11 +22,7 @@ APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)
 
 LD_LIBS =		$(CAR_LIB) \
 			$(CARMAKER_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB)
-OBJS =			CM_Main.o CM_Vehicle.o User.o rsds-client-camera.o AEB.o
-OBJS += 		LineSensorFord.o
-OBJS +=         	ObjectSensorFord.o
-OBJS +=         	CameraSensorFord.o
-OBJS +=         	RadarSensorFord.o
+OBJS =			CM_Main.o CM_Vehicle.o User.o IO.o
 
 # Prepend local include/library directory to include path:
 # PREINC_CFLAGS +=		-I../include -I../lib/$(ARCH) -I../lib
@@ -37,15 +33,12 @@ OBJS +=         	RadarSensorFord.o
 
 ### Linking with RTW-built Simulink models
 
-#MATSUPP_MATVER =	R2018a
+#MATSUPP_MATVER =	R2021a
 #LD_LIBS +=		$(MATSUPP_LIB)
 
 
 # @@PLUGIN-BEGIN-LIBS@@ - Automatically generated code - don't edit!
-OBJS += libPoC_ACC_LCA_$(ARCH).a
-OBJS += libSRM_1_b4_$(ARCH).a
-
-OBJS += libPoC_ACC_LCA2_$(ARCH).a
+OBJS += libVehControl_$(ARCH).a
 # @@PLUGIN-END@@
 
 ### END (Linking with RTW-built Simulink models)

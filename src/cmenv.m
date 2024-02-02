@@ -4,19 +4,15 @@ function cmenv (varargin)		% -*- Mode: Fundamental -*-
 
     % CarMaker installation directory.
     if isempty(which('cmlocaldir'))
-	cminstdir = '/opt/ipg/carmaker/linux64-10.2.2';
+	cminstdir = '/opt/ipg/carmaker/linux64-12.0.1';
     else
-	cminstdir = cmlocaldir	% for mat: CM-10.0
+	cminstdir = cmlocaldir	% for mat: CM-12.0
     end
 
     disp(['CarMaker directory: ', cminstdir]);
     if ~exist(cminstdir, 'dir')
 	error('Unable to find specified CarMaker installation directory.');
     end
-
-%    if is_64_bit_version
-%	unsupported_version_error(cminstdir);
-%    end
 
     bestreldir = match_matlab_release(cminstdir);
     if isempty(bestreldir)

@@ -1,6 +1,6 @@
 # first include path has to be the include path of MakeDefs!!!
 
-include $(CM_DIR)/include/MakeDefs.linux64
+include $(CM_DIR_MASKED)/include/MakeDefs.linux64
 
 APP_VER = Car_Generic <insert.your.version.no>
 APP_NAME = CarMaker.$(ARCH)$(EXE_EXT)
@@ -27,6 +27,7 @@ OBJ_APP = ../app_tmp.o
 ### Linking with RTW-built Simulink models
 
 # @@PLUGIN-BEGIN-ECLIBS@@ - Automatically generated code - don't edit!
+OBJS += ../libVehControl_$(ARCH).a
 # @@PLUGIN-END@@
 
 ### END (Linking with RTW-built Simulink models)

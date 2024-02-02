@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CarMaker Web InterFace</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(document).ready(function(){
+            // Initially disable the start simulation button
+            $("#startSimulationButton").prop('disabled', true);
+
+            // Load txt files into dropdown on page load
+            $.get('/list-txt-files', function(files){
+                files.forEach(function(file){
+                    $('#fileDropdown').append(new Option(file, file));
+                });
+            });
+
+            // Handle file selection and parse file
+            $('#fileDropdown').change(function(){
+                var selectedFile = $(this).val();
+                $.ajax({
+                    type: "POST",
+                    url: "/parse-file",
+                    data: { fileName: selectedFile },
+                    success: function(data){
+                        var inputsContainer = $("#variablesInputs");
+                        inputsContainer.empty();
+                        var seenVariables = {}; // Object to track seen variables
+                        
+                        data.forEach(function(variable){
+                            var parts = variable.split("=");
+                            var key = parts[0].trim();
+                            var value = parts[1].trim();
+
+                            key = key.replace(/^\$/, ''); 
+
+                            // Check if the variable is already seen
+                            if (!seenVariables.hasOwnProperty(key)) {
+                                seenVariables[key] = true; // Mark as seen
+                                var inputHtml = "<label>" + key + ": </label>" +
+                                                "<input type='text' name='" + key + 
+                                                "' value='" + value + "'><br>";
+                                inputsContainer.append(inputHtml);
+                            }
+                        });
+                    },
+                    error: function(){
+                        $("#message").text("Error parsing file.");
+                    }
+                });
+            });
+
+            // Handling form submission for saving variables
+            $('#variablesForm').submit(function(e){
+                e.preventDefault();
+                var formData = $(this).serializeArray();
+                $.ajax({
+                    type: "POST",
+                    url: "/save-variables",
+                    data: formData,
+                    success: function(response){
+                        $("#message").text(response.message);
+                        // Enable the start simulation button
+                        $("#startSimulationButton").prop('disabled', false);
+                    },
+                    error: function(){
+                        $("#message").text("Error saving variables.");
+                    }
+                });
+            });
+
+            // Event listener for the start simulation button
+            $("#startSimulationButton").click(function(){
+                // AJAX request to start simulation
+                $.ajax({
+                    type: "POST",
+                    url: "/start-simulation",
+                    success: function(response){
+                        $("#message").text(response.message);
+                    },
+                    error: function(){
+                        $("#message").text("Error starting simulation.");
+                    }
+                });
+            });
+
+            // Event listener for the post-process button
+            $("#postProcessButton").click(function(){
+                // AJAX request to trigger post-processing
+                $.ajax({
+                    type: "POST",
+                    url: "/post-process",
+                    success: function(response){
+                        $("#message").text(response.message);
+                    },
+                    error: function(){
+                        $("#message").text("Error in post-processing.");
+                    }
+                });
+            });
+        });
+    </script>
+
+</head>
+<body>
+    <header>
+        <h1>CarMaker Simulation Interface</h1>
+    </header>
+    <div class="container">
+        <select id="fileDropdown"></select>
+        <form id="variablesForm">
+            <div id="variablesInputs"></div> <!-- Container for input fields -->
+            <button type="submit">Save Variables</button>
+        </form>
+        <button id="startSimulationButton">Start Simulation</button>
+
+        <!-- New button for post-processing -->
+        <button id="postProcessButton">Post Process Results</button>
+
+        <p id="message"></p> <!-- Element to display messages -->
+    </div>
+</body>
+</html>
