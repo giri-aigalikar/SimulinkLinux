@@ -1,14 +1,12 @@
 /*
-******************************************************************************
-**  CarMaker
-**  Vehicle Dynamics Simulation Toolkit
-**
-**  Copyright (C)   IPG Automotive GmbH
-**                  Bannwaldallee 60             Phone  +49.721.98520.0
-**                  76185 Karlsruhe              Fax    +49.721.98520.99
-**                  Germany                      WWW    www.ipg-automotive.com
-******************************************************************************
-*/
+ *****************************************************************************
+ *  CarMaker - Version 14.0.1
+ *  Virtual Test Driving
+ *
+ *  Copyright ©1998-2025 IPG Automotive GmbH. All rights reserved.
+ *  www.ipg-automotive.com
+ *****************************************************************************
+ */
 
 #include <Global.h>
 
@@ -19,38 +17,37 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(_DSRT) || defined(_DSRTLX)
+#if defined(_DSRTLX) || defined(_DSRT64)
 #  include <DsApplicationInterface.h>
 #endif
 
 #include <infoc.h>
 #include <CarMaker.h>
 #include <ipgdriver.h>
-#include <road.h>
+#include <CMDefs.h>
+#include <Road.h>
 
 extern const char *SetConnectedIO (const char *io);
 
 static const char *CompileLibs[] = {
-    /* libVehControl_linux64.a */
-    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libcar.a */
-    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libcarmaker.a */
-    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgdriver.a */
-    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgroad.a */
-    /* /opt/ipg/carmaker/linux64-12.0.1/lib/libipgtire.a */
-    "libVehControl_linux64.a	VehControl linux64 1.0 2024-02-02",
-    "libcar.a	CarMaker-Car linux64 12.0.1 2023-05-24",
-    "libcarmaker.a	CarMaker linux64 12.0.1 2023-05-24",
-    "libipgdriver.a	IPGDriver linux64 12.0.1.2 2023-05-24",
-    "libipgroad.a	IPGRoad linux64 12.0.1 2023-05-24",
-    "libipgtire.a	IPGTire linux64 9.1 2023-03-24",
+    /* /opt/ipg/carmaker/linux64-14.0.1/lib/libcar.a */
+    /* /opt/ipg/carmaker/linux64-14.0.1/lib/libcarmaker.a */
+    /* /opt/ipg/carmaker/linux64-14.0.1/lib/libipgdriver.a */
+    /* /opt/ipg/carmaker/linux64-14.0.1/lib/libipgroad.a */
+    /* /opt/ipg/carmaker/linux64-14.0.1/lib/libipgtire.a */
+    "libcar.a	CarMaker-Car linux64 14.0.1 2025-01-28",
+    "libcarmaker.a	CarMaker linux64 14.0.1 2025-01-28",
+    "libipgdriver.a	IPGDriver linux64 14.0.1 2025-01-24",
+    "libipgroad.a	IPGRoad linux64 14.0.1 2025-01-24",
+    "libipgtire.a	IPGTire linux64 9.1.1 2024-10-08",
     NULL
 };
 
 
 static const char *CompileFlags[] = {
     "-m64 -fPIC -O3 -DNDEBUG -DLINUX -DLINUX64 -D_GNU_SOURCE",
-    "-D_FILE_OFFSET_BITS=64 -DCM_NUMVER=120001",
-    "-I/opt/ipg/carmaker/linux64-12.0.1/include -Wall",
+    "-D_FILE_OFFSET_BITS=64 -DCM_NUMVER=140001",
+    "-I/opt/ipg/carmaker/linux64-14.0.1/include -Wall",
     "-Wimplicit -Wmissing-prototypes",
     NULL
 };
@@ -61,12 +58,12 @@ tAppStartInfo   AppStartInfo = {
     "2",          /* App_BuildVersion    */
     "giri",     /* App_CompileUser     */
     "giri-thinkpad-p15-gen-2i",         /* App_CompileSystem   */
-    "2024-02-02 15:29:20",  /* App_CompileTime */
+    "2025-05-19 12:32:54",  /* App_CompileTime */
 
     CompileFlags,                /* App_CompileFlags  */
     CompileLibs,                 /* App_Libs          */
 
-    "12.0.1",          /* SetVersion        */
+    "14.0.1",          /* SetVersion        */
 
     NULL,           /* TestRunName       */
     NULL,           /* TestRunFName      */
@@ -191,12 +188,4 @@ App_ExportConfig (void)
     return 0;
 }
 
-
-#if defined(_DS1006)
-void
-IPGRT_Board_Init (void)
-{
-    init();
-}
-#endif
 

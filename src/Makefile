@@ -1,11 +1,9 @@
 #******************************************************************************
-#**  CarMaker - Version 12.0.1
-#**  Vehicle Dynamics Simulation Toolkit
-#**
-#**  Copyright (C)   IPG Automotive GmbH
-#**                  Bannwaldallee 60             Phone  +49.721.98520.0
-#**                  76185 Karlsruhe              Fax    +49.721.98520.99
-#**                  Germany                      WWW    www.ipg-automotive.com
+#*  CarMaker - Version 14.0.1
+#*  Virtual Test Driving
+#*
+#*  Copyright ©1998-2025 IPG Automotive GmbH. All rights reserved.
+#*  www.ipg-automotive.com
 #******************************************************************************
 #**
 #**  Application Makefile
@@ -13,7 +11,7 @@
 #**
 #******************************************************************************
 
-include /opt/ipg/carmaker/linux64-12.0.1/include/MakeDefs.linux64
+include /opt/ipg/carmaker/linux64-14.0.1/include/MakeDefs.linux64
 
 APP_VER =		"Car_Generic <insert.your.version.no>"
 APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)
@@ -21,8 +19,8 @@ APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)
 #OPT_CFLAGS =		-g -O1
 
 LD_LIBS =		$(CAR_LIB) \
-			$(CARMAKER_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB)
-OBJS =			CM_Main.o CM_Vehicle.o User.o IO.o
+			$(CARMAKER_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB) $(MIO_LIB)
+OBJS =			CM_Main.o CM_Vehicle.o User.o IO.o AEB_Raw.o
 
 # Prepend local include/library directory to include path:
 # PREINC_CFLAGS +=		-I../include -I../lib/$(ARCH) -I../lib
@@ -38,7 +36,6 @@ OBJS =			CM_Main.o CM_Vehicle.o User.o IO.o
 
 
 # @@PLUGIN-BEGIN-LIBS@@ - Automatically generated code - don't edit!
-OBJS += libVehControl_$(ARCH).a
 # @@PLUGIN-END@@
 
 ### END (Linking with RTW-built Simulink models)
